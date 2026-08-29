@@ -1,6 +1,9 @@
 #include <stdio.h>
 
+#include "../include/server.h"
+
 int main(){
-	printf("Test\n");
+	int rs = server_start(10);
+	
 	return 0;
 }
