@@ -76,14 +76,45 @@ int server_start(int port) {
 
     while(1) {
         
-        client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
-
+        // accept() blockiert den Prozess, solange keine TCP-Verbindung von einem Client aufgebaut wurde.
+        // Nach accept() folgt die Verarbeitung des Client-Requests. Diese ist individuell lang und kann ggf. etwas dauern. Deswegen puffert listen() eingehende TCP-Verbindungen, falls accept(), bzw. der Rest in der Loop nicht so schnell hinterherkommt.
+        client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len); // accept() liest erhält Infos aus Server-Socket und ruft im Hintergrund praktisch socket() auf, um einen Client-Socket zu erzeugen
+        
         if (client_fd < 0) {
-            perror("WARNING: accept() fehlgeschlagen");
+            perror("WARNING: accept() fehlgeschlagen"); // Systemfehler
             continue;
         }
 
+        char client_ip[INET_ADDRSTRLEN]; // INET_ADDRSTRLEN ist als 16 in POSIX definiert (IPv4 = 15 + \0)
+
+        // inet_ntop = [inet(Internet)][n(Network Binary)][to][p(Presentation/String)] -> Wandelt IPv4-Adresse des aufrufenden Clients, in String um
+        inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, sizeof(client_ip)); // PARAMS(IPv4, Quelle der IPv4-Bytes im RAM, Buffer für String, Länge des Buffers) -> Ring3-Funktion
+        // TCP sendet Daten in Big Endian und Linux erwartet die Daten in Little Endian. Das ist bei Strings allerdings irrelevant, da inet_ntop einen String aus den Bytes macht
+        // und ein Char immer nur ein Byte groß ist, somit kann das OS die Zahlen immer korrekt interpretieren, es ist nur die Leserichtung von links nach rechts relevant und die ist bei beidem gleich.
+        // Ein Integer kann z.B. aus vier Bytes bestehen. Hierbei wäre die Endianess relevant, da vier Bytes einen Wert abbilden und nicht wie bei Strings jeweils nur ein Byte je Char.
+    
+    
+        printf("INFO: Verbindung von Client (IP:Port) %s:%d\n", client_ip, ntohs(client_addr.sin_port)); // inet_ntop = [inet(Internet)][n(Network Binary)][to][hs(HostShort)] -> Wandelt den Port von Big Endian in Little Endian um.
+        // Der Port wird in sin_port als short, bzw. 16 Bit Integer gespeichert und muss dementsprechend umgewandelt werden.
+        
+        memset(buffer, 0, sizeof(buffer));
+        // ssize_t steht für signed size_t, also ein Vorzeichen-size_t, da size_t die Speicherlänge in einem 64-Bit System angibt. recv soll die Anzahl an Bytes zählen, die der Client ermittelt hat
+        // und da der POSIX-Standard -1 als Systemfehler vorgibt, musste size_t mit Vorzeichen entwickelt werden. Bei Erfolg wird einfach die Anzahl der Bytes in bytes_read gespeichert, die der Client gesendet hat.
+        ssize_t bytes_read = recv(client_fd, buffer, sizeof(buffer) -1, 0); // recv zieht sich die Daten aus der TCP-Receive-Queue, wo die Daten vom Kernel bei der Ankunft gepuffert werden, bis sie abgeholt werden.
+        // client_fd ist nur der file descriptor, den der Kernel bei Ankunft der Client-Anfrage auf das Paket in der TCP-Receive-Queue geklebt hat und mir zurückgegeben hat, damit ich ihm sagen kann,
+        // von wo ich die Bytes nach Ring 3 rüberkopieren will, indem ich den file descriptor in recv als Parameter mitgebe.
+
+        if (bytes_read > 0) {
+            printf("--- Eingehender Request ---\n%s\n---------------------------\n", buffer); // Hier weitere Verarbeitung
+        }
+
+        // Sendet die Daten über das Kabel zurück an den Client
+        send(client_fd, HTTP_RESPONSE, strlen(HTTP_RESPONSE), 0); // client_fd=Für Kernel, damit er weiß, an wen (IPv4, Port), HTTP_RESPONSE=Antwort Für Client, strlen() ist für den Kernel, damit er weiß, wie viele Bytes er senden soll, 0 ist Standardverhalten beim Senden.
+
+        close(client_fd);
     }
+    
+    close(server_fd);
 
     return 0;
 }
