@@ -7,14 +7,15 @@
 #include <netinet/in.h> // POSIX-Socket-API
 
 #include "../include/server.h"
+#include "../include/http.h"
 
 static const char *HTTP_RESPONSE = 
     "HTTP/1.1 200 OK\r\n"
-    "Content-Type: text/plain\r\n"
-    "Content-Length: 13\r\n"
+    "Content-Type: text/html\r\n"
+    "Content-Length: 20\r\n"
     "Connection: close\r\n"
     "\r\n"
-    "Hello, World!";
+    "<p>Hello, World!</p>";
 
 
 int server_start(int port) {
@@ -94,7 +95,7 @@ int server_start(int port) {
         // Ein Integer kann z.B. aus vier Bytes bestehen. Hierbei wäre die Endianess relevant, da vier Bytes einen Wert abbilden und nicht wie bei Strings jeweils nur ein Byte je Char.
     
     
-        printf("INFO: Verbindung von Client (IP:Port) %s:%d\n", client_ip, ntohs(client_addr.sin_port)); // inet_ntop = [inet(Internet)][n(Network Binary)][to][hs(HostShort)] -> Wandelt den Port von Big Endian in Little Endian um.
+        //printf("INFO: Verbindung von Client (IP:Port) %s:%d\n", client_ip, ntohs(client_addr.sin_port)); // inet_ntop = [inet(Internet)][n(Network Binary)][to][hs(HostShort)] -> Wandelt den Port von Big Endian in Little Endian um.
         // Der Port wird in sin_port als short, bzw. 16 Bit Integer gespeichert und muss dementsprechend umgewandelt werden.
         
         memset(buffer, 0, sizeof(buffer));
@@ -105,7 +106,16 @@ int server_start(int port) {
         // von wo ich die Bytes nach Ring 3 rüberkopieren will, indem ich den file descriptor in recv als Parameter mitgebe.
 
         if (bytes_read > 0) {
-            printf("--- Eingehender Request ---\n%s\n---------------------------\n", buffer); // Hier weitere Verarbeitung
+            // printf("--- Eingehender Request ---\n%s\n---------------------------\n", buffer); // Hier weitere Verarbeitung
+            HttpRequest http_request;
+            HttpResponse http_response;
+
+            parse_http_request(
+                buffer,
+                bytes_read,
+                &http_request
+            );
+
         }
 
         // Sendet die Daten über das Kabel zurück an den Client
