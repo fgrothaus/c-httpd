@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 
 #include "../include/http.h"
 
@@ -131,6 +132,21 @@ int parse_http_request(char* buffer, size_t len, HttpRequest* req) {
         req->header_counter++;
     }
 
+    // Für HTTP/1.1 ist Host ein Pflicht-Header
+    if (strcmp(req->version, "HTTP/1.1") == 0) {
+        int host_found = 0;
+        for (size_t i = 0; i < req->header_counter; i++) {
+            // Case-insensitive Vergleich, da Header-Namen im Standard case-insensitiv sind
+            if (strcasecmp(req->headers[i].key, "Host") == 0) {
+                host_found = 1;
+                break;
+            }
+        }
+        if (!host_found) {
+            return -1;
+        }
+    }
+
     if (req->method[0] == '\0' || req->path[0] == '\0' || req->version[0] == '\0') {
         return -1;
     }
@@ -139,3 +155,72 @@ int parse_http_request(char* buffer, size_t len, HttpRequest* req) {
 
     return 0;
 }
+
+
+int build_http_response(const HttpResponse* res, char* out_buffer, size_t out_capacity) {
+    
+    if (res == NULL || out_buffer == NULL || out_capacity == 0) {
+        return -1;
+    }
+
+    return 0;
+}
+
+
+// #include <stdio.h>
+// #include <string.h>
+// #include "../include/http.h"
+
+// int build_http_response(const HttpResponse* res, char* out_buffer, size_t out_capacity) {
+//     if (res == NULL || out_buffer == NULL || out_capacity == 0) {
+//         return -1;
+//     }
+
+//     size_t offset = 0; // Merkt sich, an welcher Byte-Position wir gerade schreiben
+
+//     // 1. Status-Line schreiben (z. B. "HTTP/1.1 200 OK\r\n")
+//     int written = snprintf(out_buffer + offset, out_capacity - offset,
+//                            "HTTP/1.1 %d %s\r\n",
+//                            res->status_code,
+//                            res->status_msg);
+
+//     if (written < 0 || (size_t)written >= (out_capacity - offset)) {
+//         return -1; // Puffer reicht nicht
+//     }
+//     offset += (size_t)written;
+
+//     // 2. Alle Header aus dem Struct iterieren und anhängen
+//     for (size_t i = 0; i < res->header_counter; i++) {
+//         written = snprintf(out_buffer + offset, out_capacity - offset,
+//                            "%s: %s\r\n",
+//                            res->headers[i].key,
+//                            res->headers[i].value);
+
+//         if (written < 0 || (size_t)written >= (out_capacity - offset)) {
+//             return -1; // Puffer reicht nicht
+//         }
+//         offset += (size_t)written;
+//     }
+
+//     // 3. Content-Length & Leerzeile setzen (schließt Header-Block ab)
+//     written = snprintf(out_buffer + offset, out_capacity - offset,
+//                        "Content-Length: %zu\r\nConnection: close\r\n\r\n",
+//                        res->body_length);
+
+//     if (written < 0 || (size_t)written >= (out_capacity - offset)) {
+//         return -1; // Puffer reicht nicht
+//     }
+//     offset += (size_t)written;
+
+//     // 4. Body anhängen
+//     if (res->body != NULL && res->body_length > 0) {
+//         if (offset + res->body_length > out_capacity) {
+//             return -1; // Body passt nicht mehr in den Puffer
+//         }
+//         memcpy(out_buffer + offset, res->body, res->body_length);
+//         offset += res->body_length;
+//     }
+
+//     // Gibt die Gesamtanzahl an Bytes zurück, die nun via send() gesendet werden müssen
+//     return (int)offset;
+// }
