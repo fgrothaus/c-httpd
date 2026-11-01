@@ -8,6 +8,8 @@
 
 #include "../include/server.h"
 #include "../include/http.h"
+#include "../include/router.h"
+
 
 static const char *HTTP_RESPONSE = 
     "HTTP/1.1 200 OK\r\n"
@@ -109,17 +111,33 @@ int server_start(int port) {
             // printf("--- Eingehender Request ---\n%s\n---------------------------\n", buffer); // Hier weitere Verarbeitung
             HttpRequest http_request;
             HttpResponse http_response;
+            memset(&http_response, 0, sizeof(http_response));
 
-            parse_http_request(
-                buffer,
-                bytes_read,
-                &http_request
-            );
+            if (parse_http_request(buffer, bytes_read, &http_request) == 0) {
+                // http_request-Struct ist befüllt => Prüfen, was zurückgegeben werden muss (Routing)
+                route_request(&http_request, &http_response);
+            } else {
+                http_response.status_code = 400;
+                http_response.status_msg = "Bad Request";
+                http_response.body = "<h1>400 Bad Request</h1>";
+                http_response.body_length = strlen(http_response.body);
+
+                add_response_header(&http_response, "Content-Type", "text/html; charset=utf-8");
+                add_response_header(&http_response, "Connection", "close");
+            }
+
+            
+            // HIER HTTP_RESPONSE build_http_response aufrufen
+
+            // Sendet die Daten über das Kabel zurück an den Client
+            send(client_fd, HTTP_RESPONSE, strlen(HTTP_RESPONSE), 0); // client_fd=Für Kernel, damit er weiß, an wen (IPv4, Port), HTTP_RESPONSE=Antwort Für Client, strlen() ist für den Kernel, damit er weiß, wie viele Bytes er senden soll, 0 ist Standardverhalten beim Senden.
+            
+            if (http_response.status_code == 200 && http_response.body != NULL) {
+                free((void*)http_response.body);
+                http_response.body = NULL;
+            }
 
         }
-
-        // Sendet die Daten über das Kabel zurück an den Client
-        send(client_fd, HTTP_RESPONSE, strlen(HTTP_RESPONSE), 0); // client_fd=Für Kernel, damit er weiß, an wen (IPv4, Port), HTTP_RESPONSE=Antwort Für Client, strlen() ist für den Kernel, damit er weiß, wie viele Bytes er senden soll, 0 ist Standardverhalten beim Senden.
 
         close(client_fd);
     }
