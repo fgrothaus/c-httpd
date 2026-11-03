@@ -157,70 +157,46 @@ int parse_http_request(char* buffer, size_t len, HttpRequest* req) {
 }
 
 
-int build_http_response(const HttpResponse* res, char* out_buffer, size_t out_capacity) {
+int build_http_header(const HttpResponse* res, char* out_buffer, size_t out_capacity) {
     
     if (res == NULL || out_buffer == NULL || out_capacity == 0) {
         return -1;
     }
 
-    return 0;
+    size_t offset = 0;
+
+    // out_buffer + offset = Markiert die Schreibposition. Es wird an unterschiedliche Positionen des übergebenen header_buffer[4096] geschrieben
+    // out_capacity - offset = Anzahl, die im Buffer noch frei ist, um Buffer overflow zu verhindern
+    // snprintf gibt die Anzahl an Bytes zurück, die geschrieben worden wären, wenn der Buffer unendlich groß wäre
+    
+
+    // Status-Line:
+    int written = snprintf(out_buffer + offset, out_capacity - offset,
+                           "HTTP/1.1 %d %s\r\n",
+                           res->status_code,
+                           res->status_msg);
+
+    if (written < 0 || (size_t)written >= (out_capacity - offset)) return -1;
+    offset += (size_t)written;
+
+    // Header
+    for (size_t i = 0; i < res->header_counter; i++) {
+        written = snprintf(out_buffer + offset, out_capacity - offset,
+                           "%s: %s\r\n",
+                           res->headers[i].key,
+                           res->headers[i].value);
+    
+        if (written < 0 || (size_t)written >= (out_capacity - offset)) return -1;
+        offset += (size_t)written;
+    }
+
+    // Content-Length
+    written = snprintf(out_buffer + offset, out_capacity - offset,
+                       "Content-Length: %zu\r\nConnection: close\r\n\r\n",
+                       res->body_length);
+
+    if (written < 0 || (size_t)written >= (out_capacity - offset)) return -1;
+    offset += (size_t)written;
+
+    return (int)offset;
 }
-
-
-// #include <stdio.h>
-// #include <string.h>
-// #include "../include/http.h"
-
-// int build_http_response(const HttpResponse* res, char* out_buffer, size_t out_capacity) {
-//     if (res == NULL || out_buffer == NULL || out_capacity == 0) {
-//         return -1;
-//     }
-
-//     size_t offset = 0; // Merkt sich, an welcher Byte-Position wir gerade schreiben
-
-//     // 1. Status-Line schreiben (z. B. "HTTP/1.1 200 OK\r\n")
-//     int written = snprintf(out_buffer + offset, out_capacity - offset,
-//                            "HTTP/1.1 %d %s\r\n",
-//                            res->status_code,
-//                            res->status_msg);
-
-//     if (written < 0 || (size_t)written >= (out_capacity - offset)) {
-//         return -1; // Puffer reicht nicht
-//     }
-//     offset += (size_t)written;
-
-//     // 2. Alle Header aus dem Struct iterieren und anhängen
-//     for (size_t i = 0; i < res->header_counter; i++) {
-//         written = snprintf(out_buffer + offset, out_capacity - offset,
-//                            "%s: %s\r\n",
-//                            res->headers[i].key,
-//                            res->headers[i].value);
-
-//         if (written < 0 || (size_t)written >= (out_capacity - offset)) {
-//             return -1; // Puffer reicht nicht
-//         }
-//         offset += (size_t)written;
-//     }
-
-//     // 3. Content-Length & Leerzeile setzen (schließt Header-Block ab)
-//     written = snprintf(out_buffer + offset, out_capacity - offset,
-//                        "Content-Length: %zu\r\nConnection: close\r\n\r\n",
-//                        res->body_length);
-
-//     if (written < 0 || (size_t)written >= (out_capacity - offset)) {
-//         return -1; // Puffer reicht nicht
-//     }
-//     offset += (size_t)written;
-
-//     // 4. Body anhängen
-//     if (res->body != NULL && res->body_length > 0) {
-//         if (offset + res->body_length > out_capacity) {
-//             return -1; // Body passt nicht mehr in den Puffer
-//         }
-//         memcpy(out_buffer + offset, res->body, res->body_length);
-//         offset += res->body_length;
-//     }
-
-//     // Gibt die Gesamtanzahl an Bytes zurück, die nun via send() gesendet werden müssen
-//     return (int)offset;
-// }
