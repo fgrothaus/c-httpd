@@ -102,7 +102,6 @@ void route_request(const HttpRequest *request, HttpResponse *response) {
             response->body = NULL;
             response->body_length = 0;
             add_response_header(response, "Content-Type", "text/html; charset=utf-8");
-            add_response_header(response, "Connection", "close");
             return;
         }
 
@@ -121,7 +120,6 @@ void route_request(const HttpRequest *request, HttpResponse *response) {
             const char* mime = (strcmp(request->path, "/") == 0) ? "text/html; charset=utf-8" : get_mime_type(request->path);
 
             add_response_header(response, "Content-Type", mime);
-            add_response_header(response, "Connection", "close");
 
         } else {
             response->status_code = 404;
@@ -130,7 +128,6 @@ void route_request(const HttpRequest *request, HttpResponse *response) {
             response->body_length = strlen(response->body);
 
             add_response_header(response, "Content-Type", "text/html; charset=utf-8");
-            add_response_header(response, "Connection", "close");
         }
     } else if (strcmp(request->method, "HEAD") == 0) {
 
@@ -148,8 +145,6 @@ void route_request(const HttpRequest *request, HttpResponse *response) {
             const char* mime = (strcmp(request->path, "/") == 0) ? "text/html; charset=utf-8" : get_mime_type(request->path);
 
             add_response_header(response, "Content-Type", mime);
-            add_response_header(response, "Connection", "close");
-
 
         } else {
             response->status_code = 404;
@@ -158,7 +153,6 @@ void route_request(const HttpRequest *request, HttpResponse *response) {
             response->body_length = 0;
 
             add_response_header(response, "Content-Type", "text/html; charset=utf-8");
-            add_response_header(response, "Connection", "close");
         }
 
     } else {
@@ -168,6 +162,5 @@ void route_request(const HttpRequest *request, HttpResponse *response) {
         response->body_length = 0;
 
         add_response_header(response, "Allow", "GET, HEAD");
-        add_response_header(response, "Connection", "close");
     }
 }
