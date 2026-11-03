@@ -120,18 +120,31 @@ int server_start(int port) {
                 http_response.status_code = 400;
                 http_response.status_msg = "Bad Request";
                 http_response.body = "<h1>400 Bad Request</h1>";
+                // http_response.body = strdup("<h1>400 Bad Request</h1>"); // strdup erzeugt String auf dem Heap, statt in .rodata
                 http_response.body_length = strlen(http_response.body);
 
                 add_response_header(&http_response, "Content-Type", "text/html; charset=utf-8");
-                add_response_header(&http_response, "Connection", "close");
             }
 
             
-            // HIER HTTP_RESPONSE build_http_response aufrufen
-
+            //int build_http = build_http_response(http_response, buffer, sizeof(buffer));
             // Sendet die Daten über das Kabel zurück an den Client
-            send(client_fd, HTTP_RESPONSE, strlen(HTTP_RESPONSE), 0); // client_fd=Für Kernel, damit er weiß, an wen (IPv4, Port), HTTP_RESPONSE=Antwort Für Client, strlen() ist für den Kernel, damit er weiß, wie viele Bytes er senden soll, 0 ist Standardverhalten beim Senden.
+            //send(client_fd, HTTP_RESPONSE, strlen(HTTP_RESPONSE), 0); // client_fd=Für Kernel, damit er weiß, an wen (IPv4, Port), HTTP_RESPONSE=Antwort Für Client, strlen() ist für den Kernel, damit er weiß, wie viele Bytes er senden soll, 0 ist Standardverhalten beim Senden.
             
+
+            char header_buffer[4096]; // Größe einer Page der MMU
+            int header_len = build_http_header(&http_response, header_buffer, sizeof(header_buffer));
+            
+            // Zwei send() werden in nanosekunden ausgeführt und in den Kernel-Buffer.
+            // Während der Kernel das Senden über die Netzwerkkarte vorbereitet, ist das zweite send schon ausgeführt. 
+            if (header_len > 0) {
+                send(client_fd, header_buffer, (size_t)header_len, MSG_NOSIGNAL);
+
+                if (http_response.body != NULL && http_response.body_length > 0) {
+                    send(client_fd, http_response.body, http_response.body_length, MSG_NOSIGNAL);
+                }
+            }
+
             if (http_response.status_code == 200 && http_response.body != NULL) {
                 free((void*)http_response.body);
                 http_response.body = NULL;
