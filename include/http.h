@@ -35,7 +35,7 @@ typedef struct {
 
 // size_t len ist die Anzahl an Bytes, die recv() in den Buffer geschrieben hat.
 int parse_http_request(char* buffer, size_t len, HttpRequest* req); // C-Pattern ist, mit Pointern für veränderte Werte zu arbeiten, aber Statuswert (int) zu returnen
-int build_http_response(const HttpResponse* res, char* out_buffer, size_t out_capacity);
+int build_http_header(const HttpResponse* res, char* out_buffer, size_t out_capacity);
 
 
 
