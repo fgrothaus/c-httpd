@@ -107,7 +107,7 @@ int server_start(int port) {
         // client_fd ist nur der file descriptor, den der Kernel bei Ankunft der Client-Anfrage auf das Paket in der TCP-Receive-Queue geklebt hat und mir zurückgegeben hat, damit ich ihm sagen kann,
         // von wo ich die Bytes nach Ring 3 rüberkopieren will, indem ich den file descriptor in recv als Parameter mitgebe.
 
-        if (bytes_read > 0) {
+        if (bytes_read > 0) { // für Prototyp okay, aber eigentlich muss der Client den Request erst vollständig schicken, da der Parser sonst bei mehreren TCP-Paketen nur Fragmente erhält und deswegen evtl. kein \n\r etc. an den erwarteten Stellen findet.
             // printf("--- Eingehender Request ---\n%s\n---------------------------\n", buffer); // Hier weitere Verarbeitung
             HttpRequest http_request;
             HttpResponse http_response;
