@@ -2,12 +2,13 @@
 
 SRC = $(wildcard ./src/*.c)
 TARGET = main
+CFLAGS = -pthread
 
 all: run
 
 build:
 	@# Baut gcc http.c main.c router.c server.c -o main
-	@gcc $(SRC) -o $(TARGET)
+	@gcc $(CFLAGS) $(SRC) -o $(TARGET)
 
 run: build
 	@./$(TARGET)
