@@ -10,14 +10,14 @@ typedef struct {
     int buffer[QUEUE_SIZE];
     int head;
     int tail;
-    int size;
+    int counter;
     pthread_mutex_t lock; // Mutex zum Locken
-    pthread_cond_t not_empty; // Mutex sperrt Thread
-    pthread_cond_t not_full; // Weckt Mainthread, sobald Platz in der Queue ist
+    pthread_cond_t not_empty; // Es gibt Arbeit - Klingel für Workerthreads
+    pthread_cond_t not_full; // Es ist wieder Platz - Klingel für Mainthread
 } TaskQueue;
 
 int queue_init(TaskQueue *queue);
-int queue_push(TaskQueue *queue, int client_fd);
+void queue_push(TaskQueue *queue, int client_fd);
 int queue_pop(TaskQueue *queue);
 
 #endif
